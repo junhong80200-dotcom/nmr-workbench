@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMR 工作台 - 个人效率工具</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, Arial; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #1e3a5f; font-size: 1.8rem; margin-bottom: 0.2rem; }
+        .sub { color: #4a627a; margin-bottom: 2rem; border-left: 4px solid #2c7da0; padding-left: 1rem; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 2rem; padding: 1.5rem; transition: 0.2s; }
+        .card h2 { margin-top: 0; color: #1e4663; font-size: 1.4rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        label { font-weight: 600; display: block; margin-top: 0.8rem; margin-bottom: 0.3rem; color: #2c3e50; }
+        input, textarea, select { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; font-family: inherit; }
+        button { background: #2c7da0; color: white; border: none; padding: 8px 16px; border-radius: 24px; font-weight: 600; margin-top: 1rem; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #1f5e7a; }
+        .copy-btn { background: #3b82f6; margin-left: 0.5rem; padding: 4px 12px; font-size: 0.8rem; }
+        .result-area { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-top: 1rem; border: 1px solid #e2e8f0; font-family: monospace; white-space: pre-wrap; }
+        .location-list { margin-top: 1rem; max-height: 300px; overflow-y: auto; }
+        .loc-item { background: #f1f5f9; margin: 0.5rem 0; padding: 0.5rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .loc-part { font-weight: bold; }
+        .loc-loc { color: #2c7da0; }
+        .delete-btn { background: #e11d48; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; }
+        .footer { text-align: center; margin-top: 2rem; color: #6c86a3; font-size: 0.8rem; }
+        @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+        .info-note { font-size: 0.8rem; color: #5b6e8c; margin-top: 0.5rem; }
+        .inline-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .desc-select { flex: 2; min-width: 180px; }
+        .desc-buttons { flex: 1; display: flex; gap: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔬 NMR 工作台</h1>
+    <div class="sub">个人效率工具 · 数据仅存于本浏览器 · 无需IT批准</div>
+
+    <!-- 模块1: MES + 手动 + 多种不良描述快速选择 -->
+    <div class="card">
+        <h2>📋 模块1：Agile 填表助手</h2>
+        <div class="info-note">💡 从 MES 复制 Lot Quantity 粘贴进来，Reject Quantity 手动填，不良描述可下拉选择（或手动输入）。</div>
+        <label>Lot Quantity (从MES复制)</label>
+        <input type="text" id="lotQty" placeholder="例如 500">
+        <label>Reject Quantity (手动填写)</label>
+        <input type="text" id="rejectQty" placeholder="例如 3">
+        <label>Non‑conforming Description</label>
+        <div class="inline-group">
+            <select id="descSelect" class="desc-select">
+                <option value="">-- 选择常见不良描述 (或手动输入) --</option>
+                <option value="Item out of spec.">Item out of spec.</option>
+                <option value="Dimension out of tolerance.">Dimension out of tolerance.</option>
+                <option value="Surface scratch / dent.">Surface scratch / dent.</option>
+                <option value="Foreign material / contamination.">Foreign material / contamination.</option>
+                <option value="NMR spectrum abnormal – extra peak.">NMR spectrum abnormal – extra peak.</option>
+                <option value="NMR integration ratio error.">NMR integration ratio error.</option>
+                <option value="Missing feature / incomplete part.">Missing feature / incomplete part.</option>
+                <option value="Wrong material / color.">Wrong material / color.</option>
+            </select>
+            <div class="desc-buttons">
+                <button id="applyDescBtn" style="background:#4b5563; margin-top:0;">✓ 应用</button>
+            </div>
+        </div>
+        <textarea id="defectDesc" rows="2" placeholder="可手动修改描述"></textarea>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="generateBtn">✨ 生成 Agile 文本</button>
+            <button id="copyResultBtn" class="copy-btn">📋 复制结果</button>
+        </div>
+        <div class="result-area" id="agileResult">等待生成...</div>
+    </div>
+
+    <!-- 模块2：库存位置速查本 (localStorage) -->
+    <div class="card">
+        <h2>📍 模块2：库存位置速查本</h2>
+        <div class="grid-2">
+            <div>
+                <label>物料号 (Part No.)</label>
+                <input type="text" id="partNo" placeholder="例如 PN12345-01">
+                <button id="queryLocationBtn">🔍 查询位置</button>
+                <div id="queryResult" class="result-area" style="margin-top: 0.8rem;">输入物料号后点击查询</div>
+            </div>
+            <div>
+                <label>存储位置 (Location)</label>
+                <input type="text" id="newLocation" placeholder="例如 A3-2排 或 B1-05">
+                <button id="saveLocationBtn">💾 保存 / 更新位置</button>
+                <div style="font-size: 0.8rem; margin-top: 8px; color:#4b5563;">💡 保存后下次查询自动显示</div>
+            </div>
+        </div>
+        <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem;">📌 所有已保存的物料位置</h3>
+        <div id="locationList" class="location-list">加载中...</div>
+        <button id="exportLocationsBtn" style="background:#6c86a3;">📎 导出全部位置 (CSV)</button>
+    </div>
+
+    <!-- 模块3：照片附件准备助手 -->
+    <div class="card">
+        <h2>🖼️ 模块3：照片附件助手</h2>
+        <p><strong>操作清单</strong>（可打印或对照执行）</p>
+        <ul>
+            <li>✅ 将问题照片统一命名：<code>工单号_序号.jpg</code> (例如 NMR001_01.jpg)</li>
+            <li>✅ 推荐使用 <a href="https://imagemagick.org" target="_blank">ImageMagick</a> 批量压缩到 800x800</li>
+            <li>✅ 在 Agile 下载 Excel 模板后，使用“插入图片”功能贴入照片</li>
+        </ul>
+        <button id="downloadBatBtn" style="background:#2d6a4f;">⬇️ 下载批量重命名脚本 (.bat)</button>
+        <p style="margin-top: 0.8rem; font-size: 0.8rem;">⚠️ 脚本仅用于本地照片整理，不联网，无风险</p>
+    </div>
+    <div class="footer">⚡ 所有数据存储在你的浏览器中，关闭网页不丢失。可导出备份。</div>
+</div>
+
+<script>
+    // ---------- 模块1：下拉选择不良描述 ----------
+    const descSelect = document.getElementById('descSelect');
+    const applyDescBtn = document.getElementById('applyDescBtn');
+    const defectDescTextarea = document.getElementById('defectDesc');
+    applyDescBtn.addEventListener('click', () => {
+        const selected = descSelect.value;
+        if (selected) {
+            defectDescTextarea.value = selected;
+            updateAgileText();
+        } else {
+            alert('请先选择一个常见描述');
+        }
+    });
+
+    // 生成 Agile 文本
+    const generateBtn = document.getElementById('generateBtn');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+    const agileResultDiv = document.getElementById('agileResult');
+    function updateAgileText() {
+        const lot = document.getElementById('lotQty').value.trim() || '?';
+        const reject = document.getElementById('rejectQty').value.trim() || '0';
+        const desc = defectDescTextarea.value.trim() || '无描述';
+        const formatted = `Lot Qty: ${lot} | Reject Qty: ${reject} | Non-conforming: ${desc}`;
+        agileResultDiv.innerText = formatted;
+        return formatted;
+    }
+    generateBtn.addEventListener('click', updateAgileText);
+    copyResultBtn.addEventListener('click', () => {
+        const text = agileResultDiv.innerText;
+        navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板')).catch(() => alert('复制失败，手动复制'));
+    });
+    updateAgileText();
+
+    // ---------- 模块2：库存位置 (localStorage) ----------
+    const STORAGE_KEY = 'nmr_location_map';
+    function loadLocationMap() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+        return { "PN12345": "A3-2排", "NMR-001": "B1-05架" };
+    }
+    function saveLocationMap(map) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+    }
+    let locationMap = loadLocationMap();
+
+    function renderLocationList() {
+        const container = document.getElementById('locationList');
+        const entries = Object.entries(locationMap);
+        if (entries.length === 0) {
+            container.innerHTML = '<div style="color:gray;">暂无记录，请添加物料号和位置</div>';
+            return;
+        }
+        let html = '';
+        for (const [part, loc] of entries) {
+            html += `<div class="loc-item">
+                        <div><span class="loc-part">${escapeHtml(part)}</span> → <span class="loc-loc">${escapeHtml(loc)}</span></div>
+                        <button class="delete-btn" data-part="${escapeHtml(part)}">删除</button>
+                     </div>`;
+        }
+        container.innerHTML = html;
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const part = btn.getAttribute('data-part');
+                if (confirm(`删除物料 ${part} 的位置记录？`)) {
+                    delete locationMap[part];
+                    saveLocationMap(locationMap);
+                    renderLocationList();
+                    const curPart = document.getElementById('partNo').value.trim();
+                    if (curPart === part) document.getElementById('queryResult').innerHTML = '已删除该物料记录';
+                }
+            });
+        });
+    }
+
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    document.getElementById('queryLocationBtn').addEventListener('click', () => {
+        const part = document.getElementById('partNo').value.trim();
+        const resultDiv = document.getElementById('queryResult');
+        if (!part) { resultDiv.innerHTML = '❓ 请输入物料号'; return; }
+        const loc = locationMap[part];
+        if (loc) {
+            resultDiv.innerHTML = `📍 物料 <strong>${escapeHtml(part)}</strong> 的存储位置：<span style="color:#2c7da0;">${escapeHtml(loc)}</span><br>可直接去该位置取料。`;
+            document.getElementById('newLocation').value = loc;
+        } else {
+            resultDiv.innerHTML = `⚠️ 未找到物料 ${escapeHtml(part)} 的位置记录，请在右侧填写位置并保存。`;
+        }
+    });
+
+    document.getElementById('saveLocationBtn').addEventListener('click', () => {
+        const part = document.getElementById('partNo').value.trim();
+        const loc = document.getElementById('newLocation').value.trim();
+        if (!part || !loc) { alert('物料号和位置都不能为空'); return; }
+        locationMap[part] = loc;
+        saveLocationMap(locationMap);
+        renderLocationList();
+        document.getElementById('queryResult').innerHTML = `✅ 已保存：${escapeHtml(part)} → ${escapeHtml(loc)}`;
+        alert('保存成功');
+    });
+
+    document.getElementById('exportLocationsBtn').addEventListener('click', () => {
+        let csvContent = "物料号,存储位置\n";
+        for (const [part, loc] of Object.entries(locationMap)) {
+            csvContent += `"${part}","${loc}"\n`;
+        }
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", "nmr_locations.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    });
+
+    renderLocationList();
+
+    // ---------- 模块3：下载批处理脚本 ----------
+    document.getElementById('downloadBatBtn').addEventListener('click', () => {
+        const batContent = `@echo off
+setlocal enabledelayedexpansion
+echo 批量重命名并压缩照片（需安装 ImageMagick）
+set /p jobno=请输入工单号（例如 NMR001）:
+set count=1
+for %%f in (*.jpg *.png *.jpeg) do (
+    echo 处理 %%f
+    magick "%%f" -resize 800x800 "%jobno%_!count!.jpg"
+    set /a count+=1
+)
+echo 完成！共处理 %count% 个文件。
+pause
+`;
+        const blob = new Blob([batContent], { type: "text/plain" });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", "rename_resize_photos.bat");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    });
+</script>
+</body>
+</html>
